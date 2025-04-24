@@ -1,0 +1,10 @@
+services:
+  rl-worker:
+    build:
+      context: .
+      dockerfile: rl_worker/Dockerfile
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    volumes:
+      - .:/workspace/minecraft-civ-ai
