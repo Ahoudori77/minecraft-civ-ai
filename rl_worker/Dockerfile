@@ -31,12 +31,18 @@ RUN mkdir -p /opt/maven && \
 WORKDIR /workspace/minecraft-civ-ai/rl_worker
 COPY . .
 
-# ---- Python 3.11 ----------------------------------------------------
-RUN add-apt-repository ppa:deadsnakes/ppa -y && \
-    apt-get update && apt-get install -y python3.11 python3.11-dev python3.11-distutils && \
-    ln -sf /usr/bin/python3.11 /usr/bin/python && \
-    ln -sf /usr/bin/python3.11 /usr/bin/python3 && \
-    curl -sS https://bootstrap.pypa.io/get-pip.py | python
+# ========= Python 3.11 (deadsnakes) ==========
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        gnupg curl ca-certificates \
+    && curl -fsSL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x6A755776" \
+       | gpg --dearmor -o /usr/share/keyrings/deadsnakes-archive.gpg \
+    && echo "deb [signed-by=/usr/share/keyrings/deadsnakes-archive.gpg] http://ppa.launchpad.net/deadsnakes/ppa/ubuntu focal main" \
+       > /etc/apt/sources.list.d/deadsnakes.list \
+    && apt-get update \
+    && apt-get install -y python3.11 python3.11-dev python3.11-distutils \
+    && ln -sf /usr/bin/python3.11 /usr/bin/python \
+    && ln -sf /usr/bin/python3.11 /usr/bin/python3 \
+    && rm -rf /var/lib/apt/lists/*
 
 # ---- Build‑tool versions (must precede cleanrl / gym install) -------
 RUN pip install --no-cache-dir \

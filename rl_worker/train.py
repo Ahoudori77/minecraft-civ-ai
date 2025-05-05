@@ -1,78 +1,50 @@
-#!/usr/bin/env python3
 """
-rl_worker/train.py  – Headless MineRL Treechop PPO loop
-------------------------------------------------------
-* Xvfb (:99) 上で Malmo をヘッドレス起動
-* Dict‑action → Discrete に潰す ActionFlattenWrapper を使用
-* 画像 (64 × 64 × 3) を VecTransposeImage で channel‑first に変換
-* TensorBoard に episode_reward / episode_len を書き込む
+MineRL Treechop PPO (headless)  
+--------------------------------
+* ActionFlattenWrapper で MineRL の辞書型アクション → MultiDiscrete へ変換  
+* Docker 内で xvfb を使った仮想 X サーバに接続 (`DISPLAY=:99`)  
+* TensorBoard へ episode_reward / episode_len を出力  
 """
 
-import os
-import gym
-import minerl
-from stable_baselines3 import PPO
-from stable_baselines3.common.vec_env import DummyVecEnv, VecTransposeImage
+import os, gym, minerl
 from torch.utils.tensorboard import SummaryWriter
-
+from stable_baselines3 import PPO
+from stable_baselines3.common.vec_env import DummyVecEnv
 from wrappers import ActionFlattenWrapper
 
-# ── headless / logging path ──────────────────────────────────────────
-os.environ["MINERL_HEADLESS"] = "1"        # MineRL 0.4.4+ で有効
-os.environ["DISPLAY"] = ":99"              # Xvfb は entrypoint で起動済み
+# ── Headless ──────────────────────────────────────────────────────────
+os.environ.setdefault("DISPLAY", ":99")            # docker-entrypoint で Xvfb :99 が起動済み
+os.environ.setdefault("PYOPENGL_PLATFORM", "egl")  # off‑screen OpenGL
 
-WORLD = os.getenv("WORLD", "main-sim-001")
-WID   = os.getenv("WORKER_ID", "worker-local")
+# ── ログ出力先 ────────────────────────────────────────────────────────
+WORLD = os.getenv("WORLD", "default-world")
+WID   = os.getenv("WORKER_ID", os.uname()[1])
 BASE  = f"/workspace/logs/{WORLD}/{WID}"
 os.makedirs(BASE, exist_ok=True)
+print(f"[{WID}] logging to {BASE}")
+writer = SummaryWriter(BASE)
 
-print(f"[{WID}] logging to {BASE}", flush=True)
-tb = SummaryWriter(BASE)
-
-# ── env factory ─────────────────────────────────────────────────────
+# ── 環境ファクトリ ───────────────────────────────────────────────────
 def make_env():
     env = gym.make("MineRLTreechop-v0")
-    env = ActionFlattenWrapper(env)        # Dict‑action → Discrete
-    env = VecTransposeImage(env)           # (H,W,C) → (C,H,W)
+    env = ActionFlattenWrapper(env)
     return env
 
 vec_env = DummyVecEnv([make_env])
 
-# ── PPO (CNN policy) ────────────────────────────────────────────────
+# ── PPO モデル ───────────────────────────────────────────────────────
 model = PPO(
-    policy="CnnPolicy",
+    policy="MultiInputPolicy",          # Dict 観測なので必ず MultiInputPolicy
     env=vec_env,
-    n_steps=1024,
-    batch_size=256,
+    n_steps=2048,
+    batch_size=512,
     learning_rate=2.5e-4,
     gamma=0.99,
     verbose=1,
-    tensorboard_log=BASE,
 )
 
-# ── online learning loop ────────────────────────────────────────────
-TOTAL_STEPS = 50_000                      # smoke‑test scale
-obs         = vec_env.reset()
-ep_reward   = 0.0
-ep_len      = 0
-episodes    = 0
-
-for _ in range(TOTAL_STEPS):
-    action, _ = model.predict(obs, deterministic=False)
-    obs, reward, done, _ = vec_env.step(action)
-
-    ep_reward += reward[0]
-    ep_len    += 1
-
-    # 1 step ごとに mini‑update
-    model.learn(total_timesteps=1, reset_num_timesteps=False)
-
-    if done[0]:
-        episodes += 1
-        tb.add_scalar("episode_reward", ep_reward, episodes)
-        tb.add_scalar("episode_len",    ep_len,    episodes)
-        ep_reward, ep_len = 0.0, 0
-
-tb.close()
+# ── 学習 ────────────────────────────────────────────────────────────
+TOTAL_STEPS = int(os.getenv("TOTAL_STEPS", "50000"))
+model.learn(total_timesteps=TOTAL_STEPS)
 model.save(f"{BASE}/ppo_minerl_treechop.zip")
-print(f"[{WID}] training finished, model saved → ppo_minerl_treechop.zip")
+print(f"[{WID}] training finished, model saved")
