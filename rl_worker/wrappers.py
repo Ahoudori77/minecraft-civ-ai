@@ -1,40 +1,15 @@
 import gym
-import numpy as np
-from gym.spaces import Dict, MultiDiscrete, Box
-
-BTN_KEYS = [
-    "attack", "back", "forward", "jump",
-    "left", "right", "sneak", "sprint"
-]  # Discrete(2) → 0/1 ボタン
-
-CAMERA_BINS = (-10, 0, 10)  # pitch / yaw を粗く3分割
 
 class ActionFlattenWrapper(gym.ActionWrapper):
     """
-    Convert MineRL Dict action to MultiDiscrete:
-      [ btn0 … btn7,  camera_pitch_bin, camera_yaw_bin ]
+    MineRL の Dict ActionSpace → MultiDiscrete に変換
     """
-    def __init__(self, env: gym.Env):
+    def __init__(self, env):
         super().__init__(env)
-        self._orig_space: Dict = env.action_space
+        self._keys = list(self.action_space.spaces.keys())
+        sizes = [self.action_space.spaces[k].n for k in self._keys]
+        self.action_space = gym.spaces.MultiDiscrete(sizes)
 
-        # 8 buttons (0/1) + 2 camera axes (len(bins)) each
-        n_bins = len(CAMERA_BINS)
-        self.action_space = MultiDiscrete([2]*len(BTN_KEYS) + [n_bins, n_bins])
-
-    def action(self, act):
-        # act: NDArray shape (10,)
-        d = {}
-        # 8 buttons
-        for i, k in enumerate(BTN_KEYS):
-            d[k] = int(act[i])
-
-        # camera
-        pitch_bin = int(act[8])
-        yaw_bin   = int(act[9])
-        d["camera"] = np.array([
-            CAMERA_BINS[pitch_bin],
-            CAMERA_BINS[yaw_bin]
-        ], dtype=np.float32)
-
-        return d
+    def action(self, flat_action):
+        # MultiDiscrete -> Dict に戻して環境へ渡す
+        return {key: int(flat_action[i]) for i, key in enumerate(self._keys)}
