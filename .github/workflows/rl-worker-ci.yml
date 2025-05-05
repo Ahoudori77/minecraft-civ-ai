@@ -54,4 +54,4 @@ jobs:
           docker run --rm \
             -e DISPLAY=:99 \
             ghcr.io/ahoudori77/minecraft-civ-ai/rl-worker:latest \
-            python rl_worker/train.py --smoke-test
+            python train.py --smoke-test
