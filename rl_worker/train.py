@@ -1,78 +1,78 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
-rl_worker/train.py – MineRL Treechop PPO (headless)
----------------------------------------------------
-* LWJGL をソフトウェアレンダリングで動かし X11 依存を排除
-* Dict 観測 → SB3 MultiInputPolicy
-* episode_reward / episode_len を TensorBoard に書き込む
+rl_worker/train.py  – Headless MineRL Treechop PPO loop
+------------------------------------------------------
+* Xvfb (:99) 上で Malmo をヘッドレス起動
+* Dict‑action → Discrete に潰す ActionFlattenWrapper を使用
+* 画像 (64 × 64 × 3) を VecTransposeImage で channel‑first に変換
+* TensorBoard に episode_reward / episode_len を書き込む
 """
 
-import os, datetime as dt
-
-# ── ① ここで“完全ヘッドレス”を宣言 ─────────────────────────────
-os.environ["MINERL_RENDER_MODE"] = "headless"       # Malmo ≥0.4
-os.environ["MESA_GL_VERSION_OVERRIDE"] = "3.3"      # llvmpipe GL3.3
-# ------------------------------------------------------------------
-
-import gym, minerl
-from torch.utils.tensorboard import SummaryWriter
+import os
+import gym
+import minerl
 from stable_baselines3 import PPO
-from stable_baselines3.common.vec_env import DummyVecEnv
+from stable_baselines3.common.vec_env import DummyVecEnv, VecTransposeImage
+from torch.utils.tensorboard import SummaryWriter
+
 from wrappers import ActionFlattenWrapper
 
-# ── ログ出力パス ───────────────────────────────────────────────
-WORLD = os.getenv("WORLD", "default-world")
-WID   = os.getenv("WORKER_ID", os.uname()[1])
+# ── headless / logging path ──────────────────────────────────────────
+os.environ["MINERL_HEADLESS"] = "1"        # MineRL 0.4.4+ で有効
+os.environ["DISPLAY"] = ":99"              # Xvfb は entrypoint で起動済み
+
+WORLD = os.getenv("WORLD", "main-sim-001")
+WID   = os.getenv("WORKER_ID", "worker-local")
 BASE  = f"/workspace/logs/{WORLD}/{WID}"
 os.makedirs(BASE, exist_ok=True)
-print(f"[{WID}] logging to {BASE}")
 
-# ── 環境ファクトリ ─────────────────────────────────────────────
+print(f"[{WID}] logging to {BASE}", flush=True)
+tb = SummaryWriter(BASE)
+
+# ── env factory ─────────────────────────────────────────────────────
 def make_env():
     env = gym.make("MineRLTreechop-v0")
-    env = ActionFlattenWrapper(env)     # Dict→MultiDiscrete (action)
+    env = ActionFlattenWrapper(env)        # Dict‑action → Discrete
+    env = VecTransposeImage(env)           # (H,W,C) → (C,H,W)
     return env
 
 vec_env = DummyVecEnv([make_env])
 
-# ── TensorBoard writer ────────────────────────────────────────────
-writer = SummaryWriter(log_dir=BASE)
-
-# ── PPO モデル ──────────────────────────────────────────────────
+# ── PPO (CNN policy) ────────────────────────────────────────────────
 model = PPO(
-    policy="MultiInputPolicy",          # Dict 観測に対応
+    policy="CnnPolicy",
     env=vec_env,
-    n_steps=2048,
-    batch_size=512,
+    n_steps=1024,
+    batch_size=256,
     learning_rate=2.5e-4,
     gamma=0.99,
     verbose=1,
+    tensorboard_log=BASE,
 )
 
-# ── 学習ループ ────────────────────────────────────────────────
-TOTAL_STEPS   = 50_000          # PoC 用
-reward_sum, ep_len = 0.0, 0
-obs = vec_env.reset()
+# ── online learning loop ────────────────────────────────────────────
+TOTAL_STEPS = 50_000                      # smoke‑test scale
+obs         = vec_env.reset()
+ep_reward   = 0.0
+ep_len      = 0
+episodes    = 0
 
 for _ in range(TOTAL_STEPS):
     action, _ = model.predict(obs, deterministic=False)
     obs, reward, done, _ = vec_env.step(action)
 
-    reward_sum += float(reward[0])
-    ep_len     += 1
+    ep_reward += reward[0]
+    ep_len    += 1
 
-    # on‑policy: 1 step ごとにバッファへ追加 & 即学習
+    # 1 step ごとに mini‑update
     model.learn(total_timesteps=1, reset_num_timesteps=False)
 
     if done[0]:
-        ts = model.num_timesteps
-        writer.add_scalar("episode_reward", reward_sum, ts)
-        writer.add_scalar("episode_len",    ep_len,    ts)
-        reward_sum, ep_len = 0.0, 0
+        episodes += 1
+        tb.add_scalar("episode_reward", ep_reward, episodes)
+        tb.add_scalar("episode_len",    ep_len,    episodes)
+        ep_reward, ep_len = 0.0, 0
 
-writer.close()
-vec_env.close()
-
-model_path = f"{BASE}/ppo_minerl_treechop.zip"
-model.save(model_path)
-print(f"[{WID}] training finished, model saved → {model_path}")
+tb.close()
+model.save(f"{BASE}/ppo_minerl_treechop.zip")
+print(f"[{WID}] training finished, model saved → ppo_minerl_treechop.zip")

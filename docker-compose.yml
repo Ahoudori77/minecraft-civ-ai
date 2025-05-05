@@ -2,6 +2,7 @@ services:
   rl-worker:
     build:
       context: ./rl_worker          # ← Dockerfile と train.py があるディレクトリ
+    restart: unless-stopped
     tty: true
     shm_size: 1g
 
