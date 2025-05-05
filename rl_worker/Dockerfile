@@ -54,6 +54,10 @@ RUN pip install --no-cache-dir \
         --no-build-isolation && \
     pip install --no-cache-dir 'cleanrl==0.4.8' --no-build-isolation
 
+# ---- Utilities: ffmpeg for VideoRecorder --------------------------------
+RUN apt-get update && apt-get install -y ffmpeg && \
+    rm -rf /var/lib/apt/lists/*
+
 # ---- MineRL (Gym 0.19 固定) ----------------------------------------
 RUN pip install --no-cache-dir \
         pip==20.3.4 \
