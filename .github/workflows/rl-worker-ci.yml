@@ -47,3 +47,11 @@ jobs:
             ghcr.io/${{ secrets.GHCR_USERNAME }}/minecraft-civ-ai/rl-worker:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # 5) Smoke test – cleanrl 0.4.8
+      - name: Smoke test MineRL PPO (cleanrl 0.4.8)
+        run: |
+          docker run --rm \
+            -e DISPLAY=:99 \
+            ghcr.io/${{ secrets.GHCR_USERNAME }}/minecraft-civ-ai/rl-worker:latest \
+            python rl_worker/train.py --smoke-test

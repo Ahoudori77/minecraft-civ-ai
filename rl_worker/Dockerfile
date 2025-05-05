@@ -1,3 +1,8 @@
+# NOTE:
+#  - MineRL requires gym==0.19
+#  - Therefore we pin cleanrl to 0.4.x (gym API compatible)
+#  - SB3 1.8.0 is the last major before the 2.x API refactor
+
 FROM nvidia/cuda:11.8.0-base-ubuntu20.04
 ENV DEBIAN_FRONTEND=noninteractive \
     MAVEN_VERSION=3.6.3 \
