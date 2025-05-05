@@ -1,12 +1,19 @@
 services:
-  rl-worker:              # ── サービス名
-    build: ./rl_worker    #   コンテキスト
-    image: rl-worker
-    command: tail -f /dev/null          # 常駐させる
-    deploy:                             # (GPU 利用例)
+  rl-worker:
+    image: ghcr.io/ahoudori77/minecraft-civ-ai/rl-worker:latest
+    tty: true
+    shm_size: 1g
+    environment:
+      WORLD: main-sim-001
+      WORKER_ID: ${HOSTNAME:-worker-local}
+      CUDA_VISIBLE_DEVICES: "0"
+    volumes:
+      - ./logs:/workspace/logs:rw
+    command: python train.py
+    deploy:
       resources:
         reservations:
           devices:
-            - capabilities: ["gpu"]
-    volumes:
-      - .:/workspace/minecraft-civ-ai
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

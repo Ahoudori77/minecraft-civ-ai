@@ -1,29 +1,25 @@
-"""
-Smoke PPO training compatible with cleanrl 0.4.x + gym 0.19
-• --smoke-test で 2_000 step だけ回す
-"""
-import argparse, gym, minerl, os
-from stable_baselines3 import PPO
-from stable_baselines3.common.vec_env import DummyVecEnv
+import os, datetime as dt
+import gym, minerl
+from gym.wrappers.monitoring.video_recorder import VideoRecorder
 
-def make_env():
-    def _init():
-        return gym.make("MineRLTreechop-v0")
-    return _init
+WORLD  = os.getenv("WORLD", "default-world")
+WID    = os.getenv("WORKER_ID", "worker-0")
+BASE   = f"/workspace/logs/{WORLD}/{WID}"
+os.makedirs(BASE, exist_ok=True)
 
-def main():
-    p = argparse.ArgumentParser()
-    p.add_argument("--total-timesteps", type=int, default=100_000)
-    p.add_argument("--smoke-test", action="store_true")
-    args = p.parse_args()
+print(f"[{WID}] logging to {BASE}")
 
-    if args.smoke_test:
-        args.total_timesteps = 2_000
+env = gym.make("MineRLTreechop-v0")
+obs = env.reset()
+print(f"[{WID}] reset OK, obs['pov'].shape = {obs['pov'].shape}")
 
-    env = DummyVecEnv([make_env()])
-    model = PPO("CnnPolicy", env, verbose=0, n_steps=256, batch_size=256)
-    model.learn(total_timesteps=args.total_timesteps)
-    env.close()
-
-if __name__ == "__main__":
-    main()
+video = VideoRecorder(env, f"{BASE}/run_{dt.datetime.now():%Y%m%d_%H%M%S}.mp4")
+for _ in range(20):                       # ← 20 ステップだけ録画
+    video.capture_frame()
+    action = env.action_space.sample()
+    obs, reward, done, _ = env.step(action)
+    if done:
+        env.reset()
+video.close()
+env.close()
+print(f"[{WID}] finished 20 steps, video saved")
