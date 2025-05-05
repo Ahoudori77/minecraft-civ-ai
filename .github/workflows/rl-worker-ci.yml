@@ -43,8 +43,8 @@ jobs:
           file: rl_worker/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.actor }}/minecraft-civ-ai/rl-worker:latest
-            ghcr.io/${{ github.actor }}/minecraft-civ-ai/rl-worker:${{ github.sha }}
+            ghcr.io/ahoudori77/minecraft-civ-ai/rl-worker:latest
+            ghcr.io/ahoudori77/minecraft-civ-ai/rl-worker:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -53,5 +53,5 @@ jobs:
         run: |
           docker run --rm \
             -e DISPLAY=:99 \
-            ghcr.io/${{ github.actor }}/minecraft-civ-ai/rl-worker:latest \
+            ghcr.io/ahoudori77/minecraft-civ-ai/rl-worker:latest \
             python rl_worker/train.py --smoke-test
