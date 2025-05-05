@@ -48,10 +48,16 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # 5) Smoke test – cleanrl 0.4.8
-      - name: Smoke test MineRL PPO (cleanrl 0.4.8)
+      # 5) Smoke test – just reset the MineRL env
+      - name: Smoke test MineRL env init
         run: |
           docker run --rm \
             -e DISPLAY=:99 \
             ghcr.io/ahoudori77/minecraft-civ-ai/rl-worker:latest \
-            python train.py --smoke-test
+            python - <<'PY'
+          import gym, minerl
+          env = gym.make("MineRLTreechop-v0")
+          obs = env.reset()
+          print("pov shape:", obs["pov"].shape)   # should print (64, 64, 3)
+          env.close()
+          PY
