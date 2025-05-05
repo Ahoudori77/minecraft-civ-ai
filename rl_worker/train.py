@@ -1,57 +1,67 @@
 """
-rl_worker/train.py – minimal smoke‑test loop
+rl_worker/train.py – MineRL Treechop PPO PoC
 --------------------------------------------
-* Spawns a MineRLTreechop‑v0 env
-* Records 20 random steps to MP4
-* Logs a dummy scalar to TensorBoard so we can verify TB wiring
+* ActionFlattenWrapper で Dict→MultiDiscrete に変換
+* SB3 1.6 PPO を online 学習
+* episode_reward / episode_len を TensorBoard に書き込む
 """
 
-import os
-import datetime as dt
-import random
-import gym
-import minerl
-from gym.wrappers.monitoring.video_recorder import VideoRecorder
+import os, random
+import gym, minerl
 from torch.utils.tensorboard import SummaryWriter
+from stable_baselines3 import PPO
+from stable_baselines3.common.vec_env import DummyVecEnv
+from wrappers import ActionFlattenWrapper      # ← 新規ファイル
 
-# ── Runtime identifiers ──────────────────────────────────────────────
+# ── ID & 出力パス ──────────────────────────────────────────
 WORLD = os.getenv("WORLD", "default-world")
-# fallback to container hostname if WORKER_ID env var is absent
 WID   = os.getenv("WORKER_ID", os.uname()[1])
+BASE  = f"/workspace/logs/{WORLD}/{WID}"
+os.makedirs(BASE, exist_ok=True)
+print(f"[{WID}] logging to {BASE}")
 
-# ── Output directories ───────────────────────────────────────────────
-BASE_DIR = f"/workspace/logs/{WORLD}/{WID}"
-os.makedirs(BASE_DIR, exist_ok=True)
+writer = SummaryWriter(log_dir=BASE)
 
-print(f"[{WID}] logging to {BASE_DIR}")
+# ── 環境作成 ────────────────────────────────────────────────
+def make_env():
+    env = gym.make("MineRLTreechop-v0")
+    env = ActionFlattenWrapper(env)
+    return env
 
-# ── TensorBoard writer ───────────────────────────────────────────────
-writer = SummaryWriter(log_dir=BASE_DIR)
+vec_env = DummyVecEnv([make_env])
 
-# ── MineRL environment ───────────────────────────────────────────────
-env = gym.make("MineRLTreechop-v0")
-obs = env.reset()
-print(f"[{WID}] reset OK, obs['pov'].shape = {obs['pov'].shape}")
+# ── PPO モデル ─────────────────────────────────────────────
+model = PPO(
+    policy="MlpPolicy",
+    env=vec_env,
+    n_steps=2048,
+    batch_size=512,
+    learning_rate=2.5e-4,
+    gamma=0.99,
+    verbose=1,
+)
 
-# ── Video recorder ───────────────────────────────────────────────────
-video_path = f"{BASE_DIR}/run_{dt.datetime.now():%Y%m%d_%H%M%S}.mp4"
-video      = VideoRecorder(env, video_path)
+# ── 学習ループ ─────────────────────────────────────────────
+TOTAL_STEPS   = 50_000      # PoC 用
+reward_sum    = 0.0
+episode_len   = 0
+obs = vec_env.reset()
 
-# ── Random‑agent loop (20 steps) ─────────────────────────────────────
-for step in range(20):
-    video.capture_frame()
-    action = env.action_space.sample()
-    obs, reward, done, _ = env.step(action)
+for step in range(TOTAL_STEPS):
+    action, _ = model.predict(obs, deterministic=False)
+    obs, reward, done, _ = vec_env.step(action)
 
-    # dummy scalar so TensorBoard UI has content
-    writer.add_scalar("random_reward", random.random(), step)
+    reward_sum  += reward[0]
+    episode_len += 1
 
-    if done:
-        env.reset()
+    # online 学習: 1 step 毎に更新
+    model.learn(total_timesteps=1, reset_num_timesteps=False)
 
-# ── Cleanup ──────────────────────────────────────────────────────────
-video.close()
+    if done[0]:
+        writer.add_scalar("episode_reward", reward_sum, model.num_timesteps)
+        writer.add_scalar("episode_len",    episode_len, model.num_timesteps)
+        reward_sum, episode_len = 0.0, 0
+
 writer.close()
-env.close()
-
-print(f"[{WID}] finished 20 steps, video saved → {video_path}")
+model.save(f"{BASE}/ppo_minerl_treechop.zip")
+print(f"[{WID}] training finished, model saved")
