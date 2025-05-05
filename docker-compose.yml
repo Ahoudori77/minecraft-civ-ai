@@ -1,15 +1,20 @@
 services:
   rl-worker:
-    image: ghcr.io/ahoudori77/minecraft-civ-ai/rl-worker:latest
+    build:
+      context: ./rl_worker          # ← Dockerfile と train.py があるディレクトリ
     tty: true
     shm_size: 1g
+
     environment:
       WORLD: main-sim-001
       WORKER_ID: ${HOSTNAME:-worker-local}
       CUDA_VISIBLE_DEVICES: "0"
+
     volumes:
       - ./logs:/workspace/logs:rw
-    command: python train.py
+
+    command: python train.py        # 20‑step ランダム版
+
     deploy:
       resources:
         reservations:
@@ -17,3 +22,12 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
+
+  tensorboard:
+    image: tensorflow/tensorflow:2.15.0
+    command: tensorboard --logdir /logs --host 0.0.0.0
+    ports:
+      - "6006:6006"
+    volumes:
+      - ./logs:/logs:ro            # 読み取り専用で OK
+    restart: unless-stopped
