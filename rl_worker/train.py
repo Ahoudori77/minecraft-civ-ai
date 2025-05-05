@@ -14,7 +14,7 @@ obs = env.reset()
 print(f"[{WID}] reset OK, obs['pov'].shape = {obs['pov'].shape}")
 
 video = VideoRecorder(env, f"{BASE}/run_{dt.datetime.now():%Y%m%d_%H%M%S}.mp4")
-for _ in range(20):                       # ← 20 ステップだけ録画
+for _ in range(20):                       # 20 ステップだけ録画
     video.capture_frame()
     action = env.action_space.sample()
     obs, reward, done, _ = env.step(action)
