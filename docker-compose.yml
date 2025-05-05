@@ -1,10 +1,12 @@
 services:
-  rl-worker:
-    build:
-      context: .
-      dockerfile: rl_worker/Dockerfile
-    runtime: nvidia
-    environment:
-      - NVIDIA_VISIBLE_DEVICES=all
+  rl-worker:              # ── サービス名
+    build: ./rl_worker    #   コンテキスト
+    image: rl-worker
+    command: tail -f /dev/null          # 常駐させる
+    deploy:                             # (GPU 利用例)
+      resources:
+        reservations:
+          devices:
+            - capabilities: ["gpu"]
     volumes:
       - .:/workspace/minecraft-civ-ai
