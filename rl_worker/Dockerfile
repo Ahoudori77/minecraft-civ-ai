@@ -1,5 +1,5 @@
 # --------------------------------------------------------------------
-# Base image : CUDA 11.8 + Ubuntu 20.04
+# Base image : CUDA 11.8 + Ubuntu 20.04 (headless)
 # --------------------------------------------------------------------
 FROM nvidia/cuda:11.8.0-base-ubuntu20.04
 
@@ -31,31 +31,39 @@ RUN mkdir -p /opt/maven && \
 WORKDIR /workspace/minecraft-civ-ai/rl_worker
 COPY . .
 
-# ---- Python 3.11 ----------------------------------------------------
+# ---- Python 3.11 ----------------------------------------------------
 RUN add-apt-repository ppa:deadsnakes/ppa -y && \
     apt-get update && apt-get install -y python3.11 python3.11-dev python3.11-distutils && \
     ln -sf /usr/bin/python3.11 /usr/bin/python && \
     ln -sf /usr/bin/python3.11 /usr/bin/python3 && \
     curl -sS https://bootstrap.pypa.io/get-pip.py | python
 
+# ---- Build‑tool versions (must precede cleanrl / gym install) -------
+RUN pip install --no-cache-dir \
+        pip==20.3.4 \
+        setuptools==52.0.0 \
+        wheel==0.36.2 \
+        "packaging<21"
+
 # ---- Common Python libs --------------------------------------------
 RUN pip install --no-cache-dir \
-    --extra-index-url https://download.pytorch.org/whl/cu118 \
-    'torch==2.2.2+cu118' \
-    'stable-baselines3==1.8.0' \
-    'networkx<3' \
-    'cleanrl==0.4.8'
+        --extra-index-url https://download.pytorch.org/whl/cu118 \
+        'torch==2.2.2+cu118' \
+        'networkx<3' \
+        'stable-baselines3==1.6.2' \
+        --no-build-isolation && \
+    pip install --no-cache-dir 'cleanrl==0.4.8' --no-build-isolation
 
-# ---- MineRL (Gym 0.19 固定) ----------------------------------------
+# ---- MineRL (Gym 0.19 固定) ----------------------------------------
 RUN pip install --no-cache-dir \
-    pip==20.3.4 \
-    setuptools==52.0.0 \
-    wheel==0.36.2 \
-    'packaging<21' && \
+        pip==20.3.4 \
+        setuptools==52.0.0 \
+        wheel==0.36.2 \
+        'packaging<21' && \
     pip install --no-cache-dir --no-build-isolation \
-    'gym==0.19.0' 'numpy==1.24.4' && \
+        'gym==0.19.0' 'numpy==1.24.4' && \
     pip install --no-cache-dir \
-    https://github.com/danijar/minerl/releases/download/v0.4.4-patched/minerl_mirror-0.4.4-cp311-cp311-linux_x86_64.whl
+        https://github.com/danijar/minerl/releases/download/v0.4.4-patched/minerl_mirror-0.4.4-cp311-cp311-linux_x86_64.whl
 
 # ---- Entrypoint: start Xvfb ----------------------------------------
 COPY docker-entrypoint.sh /usr/local/bin/
