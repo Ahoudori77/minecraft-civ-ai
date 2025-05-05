@@ -1,0 +1,49 @@
+name: Build & Push rl-worker (headless)
+
+on:
+  push:
+    branches: [main, feature/rl-worker-headless]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      # 1) ソース取得
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2) QEMU + buildx セットアップ（マルチアーキ用、念のため）
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v3
+
+      # 3) GHCR ログイン
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_USERNAME }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      # 4) ビルド & プッシュ
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: rl_worker/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ secrets.GHCR_USERNAME }}/minecraft-civ-ai/rl-worker:latest
+            ghcr.io/${{ secrets.GHCR_USERNAME }}/minecraft-civ-ai/rl-worker:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
