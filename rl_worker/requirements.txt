@@ -1,7 +1,7 @@
 gym==0.19.0
 numpy==1.24.4
 torch==2.2.2
-stable-baselines3==1.6.2
+stable-baselines3==1.4.0
 cleanrl==0.4.8
 networkx<3
 minerl_mirror @ https://github.com/danijar/minerl/releases/download/v0.4.4-patched/minerl_mirror-0.4.4-cp311-cp311-linux_x86_64.whl
