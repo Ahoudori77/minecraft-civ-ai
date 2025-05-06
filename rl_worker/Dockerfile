@@ -21,10 +21,16 @@ RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
 # ソースをコピー
 WORKDIR /workspace/minecraft-civ-ai/rl_worker
-COPY rl_worker/ ./
 
-# entrypoint スクリプト
-COPY rl_worker/docker-entrypoint.sh /usr/local/bin/
+# 依存ファイルをそこから参照
+COPY requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
+
+# ソース一式
+COPY . .
+
+# entrypoint
+COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 ENTRYPOINT ["docker-entrypoint.sh"]
