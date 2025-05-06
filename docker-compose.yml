@@ -1,34 +1,17 @@
+version: "3.8"
 services:
   rl-worker:
     build:
-      context: ./rl_worker          # ← Dockerfile と train.py があるディレクトリ
-    restart: unless-stopped
-    tty: true
-    shm_size: 1g
-
-    environment:
-      WORLD: main-sim-001
-      WORKER_ID: ${HOSTNAME:-worker-local}
-      CUDA_VISIBLE_DEVICES: "0"
-
+      context: ./rl_worker          # ← build コンテキストを rl_worker 以下に
+      dockerfile: Dockerfile        # ← rl_worker/Dockerfile を使う
     volumes:
-      - ./logs:/workspace/logs:rw
-
-    command: python train.py        # 20‑step ランダム版
-
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
-
+      - ./rl_worker:/app             # ホスト側のソースを /app にマウント
+    environment:
+      - DISPLAY=:99
+    command: ["bash", "-c", "docker-entrypoint.sh && python train.py"]
   tensorboard:
-    image: tensorflow/tensorflow:2.15.0
-    command: tensorboard --logdir /logs --host 0.0.0.0
+    image: tensorflow/tensorflow
     ports:
       - "6006:6006"
     volumes:
-      - ./logs:/logs:ro            # 読み取り専用で OK
-    restart: unless-stopped
+      - ./logs:/workspace/logs

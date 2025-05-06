@@ -1,11 +1,7 @@
-pip==20.3.4
-setuptools==52.0.0
-wheel==0.36.2
-packaging<21
-torch==2.2.2+cu118
-networkx<3
-stable-baselines3==1.6.2
-cleanrl==0.4.8
 gym==0.19.0
 numpy==1.24.4
-https://github.com/danijar/minerl/releases/download/v0.4.4-patched/minerl_mirror-0.4.4-cp311-cp311-linux_x86_64.whl
+torch==2.2.2+cu118
+stable-baselines3==1.6.2
+cleanrl==0.4.8
+networkx<3
+minerl_mirror @ https://github.com/danijar/minerl/releases/download/v0.4.4-patched/minerl_mirror-0.4.4-cp311-cp311-linux_x86_64.whl
