@@ -1,7 +1,7 @@
 # --------------------------------------------------------------------
 # Base image : CUDA 11.8 + Ubuntu 22.04 (headless)
 # --------------------------------------------------------------------
-    FROM nvidia/cuda:11.8.0-base-ubuntu22.04
+    FROM nvidia/cuda:11.8.0-runtime-ubuntu22.04
 
     ENV DEBIAN_FRONTEND=noninteractive \
         MAVEN_VERSION=3.6.3 \
