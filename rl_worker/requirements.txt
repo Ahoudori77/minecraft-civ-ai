@@ -1,9 +1,6 @@
-# ---- MineRL 依存と整合が取れている最小セット ----
-gym==0.23.1
+gym==0.23.1        # MineRL patched wheel と揃える
 numpy==1.24.4
-torch==2.2.2            # CPU wheel（公式 PyPI）
-stable-baselines3==1.7.0
-cleanrl==0.4.6
+torch==2.2.2
+cleanrl==0.4.8
 networkx<3
-# MineRL はサイズが大きい & gym pin があり依存衝突するので
-# Dockerfile で --no-deps で個別インストールする
+# stable-baselines3 ⇒ MineRL と競合するので今回は外す
