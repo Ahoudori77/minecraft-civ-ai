@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -e
-# Xvfbをバックグラウンドで起動
+
+# Xvfb をバックグラウンド起動（GPU なしのダミー X サーバ）
 Xvfb :99 -screen 0 1280x720x24 -ac &
-# そのままコマンド実行
+
+# 利用者コマンドをそのまま実行
 exec "$@"

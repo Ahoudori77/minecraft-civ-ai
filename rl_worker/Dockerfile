@@ -1,29 +1,38 @@
-# rl_worker/Dockerfile
-FROM python:3.11-slim
+# ------------------------------------------------------------------
+# rl_worker: CPU-only, headless MineRL 学習環境
+# ------------------------------------------------------------------
+    FROM python:3.11-slim
 
-ENV DEBIAN_FRONTEND=noninteractive \
-    DISPLAY=:99 \
-    LIBGL_ALWAYS_SOFTWARE=1 \
-    PYTHONUNBUFFERED=1
-
-WORKDIR /app
-
-# 1) システム依存ライブラリ
-RUN apt-get update && apt-get install -y --no-install-recommends \
-      xvfb libgl1-mesa-dri libx11-6 libxrandr2 \
-      build-essential curl unzip zip git \
-    && rm -rf /var/lib/apt/lists/*
-
-# 2) Python パッケージをまとめたファイルを先に COPY→pip install
-COPY requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
-
-# 3) ソース一式を COPY
-COPY . /app
-
-# 4) Xvfb 起動スクリプトをエントリポイント化
-COPY docker-entrypoint.sh /app/docker-entrypoint.sh
-RUN chmod +x /app/docker-entrypoint.sh
-
-ENTRYPOINT ["/app/docker-entrypoint.sh"]
-CMD ["bash"]
+    ENV DEBIAN_FRONTEND=noninteractive \
+        DISPLAY=:99
+    
+    # ---- OS パッケージ ------------------------------------------------
+    RUN apt-get update && apt-get install -y --no-install-recommends \
+            openjdk-8-jdk-headless \
+            xvfb x11-utils xauth \
+            libgl1-mesa-glx ffmpeg \
+            curl unzip git && \
+        rm -rf /var/lib/apt/lists/*
+    
+    WORKDIR /app
+    
+    # ========== ① MineRL ホイールを先にだけ取得 ======================
+    RUN curl -L -o minerl_mirror.whl \
+        https://github.com/danijar/minerl/releases/download/v0.4.4-patched/minerl_mirror-0.4.4-cp311-cp311-linux_x86_64.whl
+    
+    # ========== ② 依存ライブラリをインストール =========================
+    COPY rl_worker/requirements.txt ./requirements.txt
+    RUN pip install --no-cache-dir --use-deprecated=legacy-resolver -r requirements.txt
+    
+    # ========== ③ MineRL を依存解決なしでインストール ================
+    RUN pip install --no-cache-dir --no-deps ./minerl_mirror.whl && \
+        rm minerl_mirror.whl
+    
+    # ---- アプリケーションコード --------------------------------------
+    COPY rl_worker/ ./rl_worker
+    COPY rl_worker/docker-entrypoint.sh /usr/local/bin/
+    RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+    
+    ENTRYPOINT ["docker-entrypoint.sh"]
+    CMD ["python", "-m", "rl_worker.train"]
+    
