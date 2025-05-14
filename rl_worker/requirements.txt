@@ -4,4 +4,5 @@ torch==2.2.2
 cleanrl==0.4.8
 networkx<3
 coloredlogs==15.0.1
+daemoniker==0.2.3
 # stable-baselines3 ⇒ MineRL と競合するので今回は外す
