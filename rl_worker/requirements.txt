@@ -11,5 +11,13 @@ lz4==4.3.3
 imageio-ffmpeg==0.4.9
 lxml==5.2.1
 Pyro4==4.82
-xmltodict==0.13.0
+xmltodict==0.12.0
+opencv-python-headless==4.9.0.80
 # stable-baselines3 ⇒ MineRL と競合するので今回は外す
+bullet==2.0.0
+dill==0.3.8
+getch==1.0
+inflection==0.5.1
+ipython==8.24.0
+simple-term-menu==1.6.1
+pytest==8.2.1
