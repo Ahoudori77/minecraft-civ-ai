@@ -10,4 +10,5 @@ rarfile==4.1
 lz4==4.3.3
 imageio-ffmpeg==0.4.9
 lxml==5.2.1
+Pyro4==4.82
 # stable-baselines3 ⇒ MineRL と競合するので今回は外す
