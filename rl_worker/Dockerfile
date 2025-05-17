@@ -12,9 +12,11 @@ RUN apt-get update && \
         xvfb x11-utils xauth \
         libgl1-mesa-glx ffmpeg \
         build-essential python3-dev \
+        procps \
         curl wget unzip git && \
     rm -rf /var/lib/apt/lists/*
 
+ENV PYTHONPATH="/app/rl_worker:${PYTHONPATH}"
 ENV DISPLAY=:99
 ENV LIBGL_ALWAYS_SOFTWARE=1
 

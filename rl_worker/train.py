@@ -10,7 +10,7 @@ import os, gym, minerl
 from torch.utils.tensorboard import SummaryWriter
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import DummyVecEnv
-from wrappers import ActionFlattenWrapper
+from rl_worker.wrappers.action_flatten_wrapper import ActionFlattenWrapper
 
 # ── Headless ──────────────────────────────────────────────────────────
 os.environ.setdefault("DISPLAY", ":99")            # docker-entrypoint で Xvfb :99 が起動済み

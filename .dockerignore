@@ -1,0 +1,12 @@
+# Git リポジトリ情報は不要
+.git
+.gitignore
+
+# キャッシュやログは Docker コンテキストに送らない
+__pycache__/
+*.pyc
+logs/
+
+# VS Code など
+.vscode/
+.idea/
