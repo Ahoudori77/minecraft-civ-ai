@@ -1,1 +1,14 @@
-rl_worker/logs/
+# >>> 追跡したくないものだけを書く <<<
+
+# ビルド成果物
+__pycache__/
+*.pyc
+
+# IDE 設定
+.vscode/
+
+# ログ
+logs/
+
+# Docker ボリューム
+*.db
