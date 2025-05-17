@@ -1,12 +1,8 @@
-# Git リポジトリ情報は不要
-.git
-.gitignore
+# まず全部除外
+*
 
-# キャッシュやログは Docker コンテキストに送らない
-__pycache__/
-*.pyc
-logs/
-
-# VS Code など
-.vscode/
-.idea/
+# ------------- 例外（ビルドに必要なもの）-------------
+!rl_worker/**
+!docker-entrypoint.sh
+!rl_worker/Dockerfile
+!docker-compose.yml
