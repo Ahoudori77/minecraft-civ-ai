@@ -21,3 +21,4 @@ inflection==0.5.1
 ipython==8.24.0
 simple-term-menu==1.6.1
 pytest==8.2.1
+shimmy>=2.0
