@@ -11,6 +11,7 @@ RUN apt-get update && \
         openjdk-17-jdk-headless \
         xvfb x11-utils xauth \
         libgl1-mesa-glx ffmpeg \
+        build-essential python3-dev \
         curl wget unzip git && \
     rm -rf /var/lib/apt/lists/*
 
