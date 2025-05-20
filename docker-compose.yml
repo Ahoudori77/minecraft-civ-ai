@@ -1,17 +1,21 @@
-version: "3.8"
 services:
   rl-worker:
     build:
-      context: ./rl_worker          # ← build コンテキストを rl_worker 以下に
-      dockerfile: Dockerfile        # ← rl_worker/Dockerfile を使う
+      context: .
+      dockerfile: rl_worker/Dockerfile
+
     volumes:
-      - ./rl_worker:/app             # ホスト側のソースを /app にマウント
+      - ./rl_worker:/app/rl_worker       # ← ホットリロード不要なら削除可
+
     environment:
       - DISPLAY=:99
-    command: ["bash", "-c", "docker-entrypoint.sh && python train.py"]
+      - MINERL_SKIP_XCHECK=1             # MineRL の X チェック無効化
+      - PYTHONUNBUFFERED=1               # ログを即 flush
+
+    entrypoint: ["/usr/local/bin/docker-entrypoint.sh"]
+    command:    ["python", "-u", "-m", "rl_worker.train"]
+
   tensorboard:
     image: tensorflow/tensorflow
-    ports:
-      - "6006:6006"
-    volumes:
-      - ./logs:/workspace/logs
+    ports: ["6006:6006"]
+    volumes: ["./logs:/workspace/logs"]
